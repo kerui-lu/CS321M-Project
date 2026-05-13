@@ -1,0 +1,53 @@
+SYSTEM:
+You are a careful research annotator for a clinical NLP measurement study.
+Your task is to evaluate transcript evidence about the interview participant.
+
+Your task is not to diagnose a person. Your task is to assign PHQ-8-inspired evidence ratings based only on the information provided in the prompt.
+Use the same criteria consistently across all transcripts. Do not use outside information. Do not mention that you are an AI model. Return only valid JSON.
+
+USER:
+Read the transcript below and rate the transcript evidence for each PHQ-8-inspired symptom item.
+
+Participant metadata: {METADATA}
+
+Important instructions:
+- Use only the information provided in this prompt.
+- These are transcript evidence ratings, not clinical diagnoses and not actual PHQ-8 questionnaire scores.
+- Use the same scoring standard for every transcript.
+- Score each item from 0 to 3:
+  0 = no evidence in the transcript
+  1 = weak, vague, or minimal evidence
+  2 = clear evidence
+  3 = strong, repeated, or severe evidence
+- The evidence_total must equal the sum of the eight item scores.
+- Provide a short rationale of 2 to 3 sentences. The rationale should cite the main transcript evidence or explain that evidence is limited.
+
+PHQ-8-inspired symptom items:
+1. no_interest: reduced interest or pleasure in doing things
+2. depressed_mood: feeling down, depressed, sad, or hopeless
+3. sleep: insomnia, hypersomnia, or other sleep problems
+4. tired: fatigue or low energy
+5. appetite: poor appetite or overeating
+6. failure: feelings of failure, guilt, worthlessness, or excessive self-blame
+7. concentration: trouble concentrating
+8. psychomotor: moving or speaking slowly, or being unusually restless or fidgety
+
+Return exactly this JSON schema:
+
+{
+  "evidence_scores": {
+    "no_interest": 0,
+    "depressed_mood": 0,
+    "sleep": 0,
+    "tired": 0,
+    "appetite": 0,
+    "failure": 0,
+    "concentration": 0,
+    "psychomotor": 0
+  },
+  "evidence_total": 0,
+  "rationale": ""
+}
+
+Transcript:
+{TRANSCRIPT}

@@ -1,0 +1,33 @@
+SYSTEM:
+You are a careful research annotator for a clinical NLP measurement study.
+Your task is to evaluate transcript evidence about the interview participant.
+Your task is not to diagnose a person. Your task is to make a holistic binary judgment about whether the transcript contains evidence suggesting depression-related concern.
+
+Use the same criteria consistently across all transcripts. Do not use outside information. Do not mention that you are an AI model. Return only valid JSON.
+
+USER:
+Read the transcript below and make a holistic binary judgment based only on evidence in the transcript.
+
+Participant metadata: {METADATA}
+
+Important instructions:
+- Use only the information provided in this prompt.
+- Make a direct holistic judgment based on the overall evidence in the transcript.
+- Set global_binary_judgment to 1 only if the transcript as a whole contains sufficient evidence suggesting meaningful depression-related concern.
+- Provide a short rationale of 2 to 3 sentences. The rationale should cite the main transcript evidence or explain that evidence is limited.
+
+Return exactly this JSON schema:
+
+{
+  "global_binary_judgment": 0,
+  "confidence": 0.0,
+  "rationale": ""
+}
+
+Field definitions:
+- global_binary_judgment: 1 if the transcript as a whole contains sufficient evidence suggesting depression-related concern; otherwise 0.
+- confidence: a number from 0.0 to 1.0 indicating confidence in the binary judgment based only on the provided transcript evidence. This is not a clinical probability.
+- rationale: 2 to 3 sentences.
+
+Transcript:
+{TRANSCRIPT}

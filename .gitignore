@@ -1,0 +1,16 @@
+.DS_Store
+.env
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Restricted/raw DAIC-WOZ data and generated transcript derivatives
+Data/Data_DEV/
+Data/Data_Test/
+
+# Generated model outputs and local validation artifacts
+outputs/*
+!outputs/analysis/
+!outputs/analysis/README.md
+!outputs/analysis/*.csv
