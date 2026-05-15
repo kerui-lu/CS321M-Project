@@ -289,7 +289,9 @@ def is_retryable_error(exc: Exception) -> bool:
     message = str(exc).lower()
     return (
         "429" in message
+        or "503" in message
         or "rate_limit" in message
+        or "unavailable" in message
         or "temporarily unavailable" in message
         or "timeout" in message
         or "timed out" in message

@@ -18,7 +18,7 @@ MANIFEST_DIR = OUTPUT_DIR / "manifests"
 RENDERED_DIR = OUTPUT_DIR / "rendered_prompts" / "pilot_examples"
 FULL_TRANSCRIPT_DIR = OUTPUT_DIR / "transcripts" / "dev_full"
 
-MODEL_FAMILIES = ("gpt", "claude", "llama")
+MODEL_FAMILIES = ("gpt", "claude", "gemini")
 CONDITIONS = ("full_transcript", "participant_only", "interviewer_only")
 PROMPTS = {
     "item_evidence": PROMPT_DIR / "prompt_a_item_evidence.txt",

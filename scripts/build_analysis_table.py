@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build condition-specific analysis CSVs from validated GPT-4o outputs."""
+"""Build condition-specific analysis CSVs from validated LLM outputs."""
 
 from __future__ import annotations
 
@@ -39,7 +39,8 @@ GROUND_TRUTH_COLUMNS = [
 ]
 OUTPUT_COLUMNS = [
     "interview_id",
-    "openai_model",
+    "provider",
+    "model_name",
     "condition",
     "metadata_condition",
     "metadata_text",
@@ -66,7 +67,7 @@ OUTPUT_COLUMNS = [
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build one GPT analysis CSV per transcript condition."
+        description="Build one LLM analysis CSV per transcript condition."
     )
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--model-family", default="gpt")
@@ -76,13 +77,39 @@ def parse_args() -> argparse.Namespace:
         help="Model output directory to read, e.g. gpt-4o.",
     )
     parser.add_argument(
+        "--provider-label",
+        default=None,
+        help="Provider label to write in the analysis CSV, e.g. OpenAI.",
+    )
+    parser.add_argument(
+        "--model-label",
+        default=None,
+        help="Exact model label to write in the analysis CSV, e.g. gpt-4o.",
+    )
+    parser.add_argument(
         "--openai-model",
-        default="gpt-4o",
-        help="Exact OpenAI model label to write in the analysis CSV.",
+        default=None,
+        help="Deprecated alias for --model-label, kept for old GPT commands.",
     )
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
-    parser.add_argument("--prefix", default="dev_gpt4o")
+    parser.add_argument(
+        "--prefix",
+        default=None,
+        help="Output filename prefix. Defaults to dev_<output-model-dir-without-dashes>.",
+    )
     return parser.parse_args()
+
+
+def default_provider_label(model_family: str) -> str:
+    return {
+        "gpt": "OpenAI",
+        "claude": "Anthropic",
+        "gemini": "Google",
+    }.get(model_family, model_family)
+
+
+def default_prefix(output_model_dir: str) -> str:
+    return f"dev_{output_model_dir.replace('-', '')}"
 
 
 def resolve_project_path(path_text: str) -> Path:
@@ -183,7 +210,8 @@ def build_condition_rows(
     manifest_rows: list[dict[str, str]],
     condition: str,
     output_model_dir: str,
-    openai_model: str,
+    provider_label: str,
+    model_label: str,
 ) -> list[dict[str, str]]:
     item_rows: dict[str, dict[str, str]] = {}
     global_rows: dict[str, dict[str, str]] = {}
@@ -212,7 +240,8 @@ def build_condition_rows(
 
         result = {
             "interview_id": interview_id,
-            "openai_model": openai_model,
+            "provider": provider_label,
+            "model_name": model_label,
             "condition": condition,
             "metadata_condition": item_manifest_row["metadata_condition"],
             "metadata_text": item_manifest_row["metadata_text"],
@@ -268,16 +297,20 @@ def main() -> None:
     manifest_path = args.manifest if args.manifest.is_absolute() else Path.cwd() / args.manifest
     output_dir = args.output_dir if args.output_dir.is_absolute() else PROJECT_DIR / args.output_dir
     manifest_rows = read_manifest(manifest_path, args.model_family)
+    provider_label = args.provider_label or default_provider_label(args.model_family)
+    model_label = args.model_label or args.openai_model or args.output_model_dir
+    output_prefix = args.prefix or default_prefix(args.output_model_dir)
 
     for condition in CONDITIONS:
         rows = build_condition_rows(
             manifest_rows,
             condition=condition,
             output_model_dir=args.output_model_dir,
-            openai_model=args.openai_model,
+            provider_label=provider_label,
+            model_label=model_label,
         )
         validate_condition_rows(rows, condition)
-        output_path = output_dir / f"{args.prefix}_{condition}_outputs.csv"
+        output_path = output_dir / f"{output_prefix}_{condition}_outputs.csv"
         write_csv(output_path, rows)
         print(f"Wrote {display_path(output_path)} with {len(rows)} rows")
 

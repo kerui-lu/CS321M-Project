@@ -39,7 +39,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--write-summary",
         type=Path,
-        default=PROJECT_DIR / "outputs" / "validation" / "dev_pilot_gpt_validation.csv",
+        default=None,
+        help=(
+            "Optional validation CSV path. Defaults to "
+            "outputs/validation/<manifest-prefix>_<model-family>_validation.csv."
+        ),
     )
     return parser.parse_args()
 
@@ -175,9 +179,24 @@ def main() -> None:
     manifest_path = args.manifest if args.manifest.is_absolute() else Path.cwd() / args.manifest
     rows = read_manifest(manifest_path, args.model_family)
     summary_rows = [validate_row(row, args.output_model_dir) for row in rows]
+    if not summary_rows:
+        raise ValueError(f"No manifest rows found for model_family={args.model_family}")
 
-    args.write_summary.parent.mkdir(parents=True, exist_ok=True)
-    with args.write_summary.open("w", newline="", encoding="utf-8") as f:
+    if args.write_summary is None:
+        manifest_prefix = manifest_path.stem.removesuffix("_manifest")
+        summary_path = (
+            PROJECT_DIR
+            / "outputs"
+            / "validation"
+            / f"{manifest_prefix}_{args.model_family}_validation.csv"
+        )
+    else:
+        summary_path = args.write_summary
+        if not summary_path.is_absolute():
+            summary_path = PROJECT_DIR / summary_path
+
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    with summary_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=list(summary_rows[0].keys()))
         writer.writeheader()
         writer.writerows(summary_rows)
@@ -186,7 +205,7 @@ def main() -> None:
     print(f"Validated rows: {len(summary_rows)}")
     print(f"Valid rows: {valid_count}")
     print(f"Invalid rows: {len(summary_rows) - valid_count}")
-    print(f"Wrote summary: {display_path(args.write_summary)}")
+    print(f"Wrote summary: {display_path(summary_path)}")
 
 
 if __name__ == "__main__":

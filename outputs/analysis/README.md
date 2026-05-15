@@ -1,10 +1,10 @@
-# GPT-4o Dev Analysis Tables
+# Dev Analysis Tables
 
-本目录包含已经整理好的 GPT-4o Dev split 输出，用于和 DAIC-WOZ Dev ground truth 进行对比分析。
+本目录包含已经整理好的 Dev split LLM 输出，用于和 DAIC-WOZ Dev ground truth 进行对比分析。
 
 ## Model Information
 
-这些表格对应的模型是：
+本目录目前包含三组正式模型输出：
 
 - Provider: OpenAI
 - Model: `gpt-4o`
@@ -21,19 +21,49 @@
 - Tools: none (`tools: []`)
 - Tool choice: `auto`
 
-原始模型输出保存在：
-
 ```text
-outputs/llm_raw/dev_main/gpt-4o/
+raw outputs: outputs/llm_raw/dev_main/gpt-4o/
+validation: outputs/validation/dev_main_gpt4o_validation.csv
 ```
 
-验证摘要保存在：
+- Provider: Anthropic
+- Model: `claude-sonnet-4-6`
+- API: Anthropic Messages API
+- Output format: JSON schema structured output
+- Repeats: 1 次调用，没有 repeated sampling
+- Metadata condition: `no_gender`
+- Participant metadata text: `None provided.`
+- Temperature: `1.0`
+- Top-p: omitted because Claude Sonnet 4.6 rejects setting both `temperature` and `top_p`
+- Max output tokens: `600`
+- Tools: none
+- Streaming: off
 
 ```text
-outputs/validation/dev_main_gpt4o_validation.csv
+raw outputs: outputs/llm_raw/dev_main/claude/
+validation: outputs/validation/dev_main_claude_validation.csv
 ```
 
-注意：早先的 `gpt-4o-mini` 输出保存在 `outputs/llm_raw/dev_main/gpt/`，不属于本目录这三张 GPT-4o CSV。
+- Provider: Google
+- Model: `gemini-2.5-pro`
+- API: Gemini generateContent REST API
+- Output format: `responseMimeType=application/json` with `responseSchema`; strict validation is enforced locally
+- Repeats: 1 次调用，没有 repeated sampling
+- Metadata condition: `no_gender`
+- Participant metadata text: `None provided.`
+- Temperature: `1.0`
+- Top-p: `1.0`
+- Max output tokens: `600`
+- Thinking budget: `128`; this caps Gemini Pro thinking at the minimum available budget so it can return JSON within the 600-token output budget
+- Tools: none
+- Streaming: off
+
+```text
+raw outputs: outputs/llm_raw/dev_main/gemini/
+validation: outputs/validation/dev_main_gemini_validation.csv
+```
+
+注意：早先的 `gpt-4o-mini` 输出保存在 `outputs/llm_raw/dev_main/gpt/`，不属于本目录的正式三模型 CSV。
 
 ## Files
 
@@ -49,14 +79,23 @@ outputs/validation/dev_main_gpt4o_validation.csv
   - 输入仅包含 Interviewer/Ellie utterances。
   - 35 rows，对应 35 个 Dev interviews。
 
-三张表没有合并在一起；每张表只包含一个 `condition`，方便分别和 ground truth CSV 做比较。
+- `dev_claudesonnet46_full_transcript_outputs.csv`
+- `dev_claudesonnet46_participant_only_outputs.csv`
+- `dev_claudesonnet46_interviewer_only_outputs.csv`
+
+- `dev_gemini25pro_full_transcript_outputs.csv`
+- `dev_gemini25pro_participant_only_outputs.csv`
+- `dev_gemini25pro_interviewer_only_outputs.csv`
+
+同一模型的三张表没有合并在一起；每张表只包含一个 `condition`，方便分别和 ground truth CSV 做比较。
 
 ## Key Columns
 
 标识信息：
 
 - `interview_id`
-- `openai_model`
+- `provider`
+- `model_name`
 - `condition`
 - `metadata_condition`
 - `metadata_text`
@@ -112,11 +151,15 @@ thresholded_item_binary = int(pred_evidence_total >= 10)
 它和 Prompt B 的 `global_binary_judgment` 是两个不同的变量：
 
 - `thresholded_item_binary`: structured item scoring 后按阈值转换得到。
-- `global_binary_judgment`: GPT-4o 直接做出的整体二分类判断。
+- `global_binary_judgment`: 对应模型直接做出的整体二分类判断。
 
 ## Validation Status
 
-这些 CSV 由 `scripts/build_analysis_table.py` 生成。生成时已经检查：
+这些 CSV 由 `scripts/build_analysis_table.py` 生成。该脚本现在也支持 Claude/Gemini outputs，只要传入对应的 `--model-family`、`--output-model-dir`、`--provider-label`、`--model-label` 和 `--prefix`。生成时已经检查：
+
+- OpenAI GPT-4o raw outputs: 210/210 valid.
+- Anthropic Claude Sonnet 4.6 raw outputs: 210/210 valid.
+- Google Gemini 2.5 Pro raw outputs: 210/210 valid.
 
 - 每张表有 35 rows。
 - 每张表只包含一个 `condition`。
