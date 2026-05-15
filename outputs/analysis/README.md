@@ -1,20 +1,20 @@
 # Dev Analysis Tables
 
-本目录包含已经整理好的 Dev split LLM 输出，用于和 DAIC-WOZ Dev ground truth 进行对比分析。
+This directory contains analysis-ready Dev split LLM outputs for comparison with the DAIC-WOZ Dev ground truth labels.
 
 ## Model Information
 
-本目录目前包含三组正式模型输出：
+This directory currently includes formal outputs from three model families:
 
 - Provider: OpenAI
 - Model: `gpt-4o`
 - API: OpenAI Responses API
 - Output format: strict JSON schema structured output
-- Repeats: 1 次调用，没有 repeated sampling
+- Repeats: 1 call, with no repeated sampling
 - Metadata condition: `no_gender`
 - Participant metadata text: `None provided.`
-- Temperature: `1.0`，OpenAI Responses API 默认值；本次调用没有显式设置 temperature
-- Top-p: `1.0`，OpenAI Responses API 默认值；本次调用没有显式设置 top_p
+- Temperature: `1.0`; for the original no-gender GPT-4o run this was the OpenAI Responses API default and was not set explicitly
+- Top-p: `1.0`; for the original no-gender GPT-4o run this was the OpenAI Responses API default and was not set explicitly
 - Max output tokens: `600`
 - Store: `false`
 - Truncation: `disabled`
@@ -30,7 +30,7 @@ validation: outputs/validation/dev_main_gpt4o_validation.csv
 - Model: `claude-sonnet-4-6`
 - API: Anthropic Messages API
 - Output format: JSON schema structured output
-- Repeats: 1 次调用，没有 repeated sampling
+- Repeats: 1 call, with no repeated sampling
 - Metadata condition: `no_gender`
 - Participant metadata text: `None provided.`
 - Temperature: `1.0`
@@ -48,7 +48,7 @@ validation: outputs/validation/dev_main_claude_validation.csv
 - Model: `gemini-2.5-pro`
 - API: Gemini generateContent REST API
 - Output format: `responseMimeType=application/json` with `responseSchema`; strict validation is enforced locally
-- Repeats: 1 次调用，没有 repeated sampling
+- Repeats: 1 call, with no repeated sampling
 - Metadata condition: `no_gender`
 - Participant metadata text: `None provided.`
 - Temperature: `1.0`
@@ -63,21 +63,49 @@ raw outputs: outputs/llm_raw/dev_main/gemini/
 validation: outputs/validation/dev_main_gemini_validation.csv
 ```
 
-注意：早先的 `gpt-4o-mini` 输出保存在 `outputs/llm_raw/dev_main/gpt/`，不属于本目录的正式三模型 CSV。
+The earlier `gpt-4o-mini` outputs are stored under `outputs/llm_raw/dev_main/gpt/`. They are not part of the formal three-model CSV tables documented here.
+
+## Gender Metadata Participant-Only Run
+
+This directory also includes a Dev participant-only actual-gender metadata experiment. This is not a counterfactual gender sensitivity run: each participant receives only the gender recorded in the dataset.
+
+- Input condition: `participant_only`
+- Metadata condition: `actual_gender`
+- Gender mapping: `0 = female`, `1 = male`
+- Metadata text:
+  - `Gender: female.` when `Gender == 0`
+  - `Gender: male.` when `Gender == 1`
+- Repeats: 1 call
+
+Formal model settings:
+
+- OpenAI `gpt-4o`: `temperature=1.0`, `top_p=1.0`, `max_output_tokens=600`
+- Anthropic `claude-sonnet-4-6`: `temperature=1.0`, `top_p` omitted, `max_output_tokens=600`
+- Google `gemini-2.5-pro`: `temperature=1.0`, `top_p=1.0`, `thinking_budget=128`, `max_output_tokens=600`
+
+```text
+manifest: outputs/manifests/dev_gender_participant_only_manifest.csv
+gpt raw outputs: outputs/llm_raw/dev_gender_participant_only/gpt-4o/
+claude raw outputs: outputs/llm_raw/dev_gender_participant_only/claude-sonnet-4-6/
+gemini raw outputs: outputs/llm_raw/dev_gender_participant_only/gemini-2.5-pro/
+gpt validation: outputs/validation/dev_gender_participant_only_gpt_validation.csv
+claude validation: outputs/validation/dev_gender_participant_only_claude_validation.csv
+gemini validation: outputs/validation/dev_gender_participant_only_gemini_validation.csv
+```
 
 ## Files
 
 - `dev_gpt4o_full_transcript_outputs.csv`
-  - 输入为完整 transcript。
-  - 35 rows，对应 35 个 Dev interviews。
+  - Input: full transcript.
+  - 35 rows, one for each Dev interview.
 
 - `dev_gpt4o_participant_only_outputs.csv`
-  - 输入仅包含 Participant utterances。
-  - 35 rows，对应 35 个 Dev interviews。
+  - Input: Participant utterances only.
+  - 35 rows, one for each Dev interview.
 
 - `dev_gpt4o_interviewer_only_outputs.csv`
-  - 输入仅包含 Interviewer/Ellie utterances。
-  - 35 rows，对应 35 个 Dev interviews。
+  - Input: Interviewer/Ellie utterances only.
+  - 35 rows, one for each Dev interview.
 
 - `dev_claudesonnet46_full_transcript_outputs.csv`
 - `dev_claudesonnet46_participant_only_outputs.csv`
@@ -87,11 +115,17 @@ validation: outputs/validation/dev_main_gemini_validation.csv
 - `dev_gemini25pro_participant_only_outputs.csv`
 - `dev_gemini25pro_interviewer_only_outputs.csv`
 
-同一模型的三张表没有合并在一起；每张表只包含一个 `condition`，方便分别和 ground truth CSV 做比较。
+- `dev_gender_participant_only_gpt4o_outputs.csv`
+- `dev_gender_participant_only_claudesonnet46_outputs.csv`
+- `dev_gender_participant_only_gemini25pro_outputs.csv`
+
+For the no-gender main run, each model has three separate CSV files rather than one combined three-condition table. Each CSV contains exactly one `condition`, which makes separate comparison against the ground truth CSV easier.
+
+For the gender-metadata run, the three CSV files are also separate by model. Each file contains only the `participant_only` condition.
 
 ## Key Columns
 
-标识信息：
+Identifier columns:
 
 - `interview_id`
 - `provider`
@@ -101,7 +135,7 @@ validation: outputs/validation/dev_main_gemini_validation.csv
 - `metadata_text`
 - `repeat_id`
 
-Prompt A 输出，也就是 PHQ-8-inspired item evidence scoring：
+Prompt A outputs, corresponding to PHQ-8-inspired item evidence scoring:
 
 - `pred_no_interest`
 - `pred_depressed_mood`
@@ -115,13 +149,13 @@ Prompt A 输出，也就是 PHQ-8-inspired item evidence scoring：
 - `thresholded_item_binary`
 - `item_rationale`
 
-Prompt B 输出，也就是 holistic global binary judgment：
+Prompt B outputs, corresponding to holistic global binary judgment:
 
 - `global_binary_judgment`
 - `global_binary_confidence`
 - `global_rationale`
 
-Dev split ground truth：
+Dev split ground truth columns:
 
 - `PHQ8_Binary`
 - `PHQ8_Score`
@@ -135,48 +169,56 @@ Dev split ground truth：
 - `PHQ8_Concentrating`
 - `PHQ8_Moving`
 
-路径追踪：
+Path tracing columns:
 
 - `item_output_path`
 - `global_output_path`
 
 ## Derived Variables
 
-`thresholded_item_binary` 是由 Prompt A 的总分派生出来的：
+`thresholded_item_binary` is derived from the Prompt A total score:
 
 ```text
 thresholded_item_binary = int(pred_evidence_total >= 10)
 ```
 
-它和 Prompt B 的 `global_binary_judgment` 是两个不同的变量：
+It is distinct from Prompt B's `global_binary_judgment`:
 
-- `thresholded_item_binary`: structured item scoring 后按阈值转换得到。
-- `global_binary_judgment`: 对应模型直接做出的整体二分类判断。
+- `thresholded_item_binary`: derived by thresholding the structured item evidence total.
+- `global_binary_judgment`: the model's direct holistic binary judgment.
 
 ## Validation Status
 
-这些 CSV 由 `scripts/build_analysis_table.py` 生成。该脚本现在也支持 Claude/Gemini outputs，只要传入对应的 `--model-family`、`--output-model-dir`、`--provider-label`、`--model-label` 和 `--prefix`。生成时已经检查：
+These CSV files were generated with `scripts/build_analysis_table.py`. The script supports OpenAI, Anthropic, and Gemini outputs through the corresponding `--model-family`, `--output-model-dir`, `--provider-label`, `--model-label`, and `--prefix` arguments.
+
+Validation summaries:
 
 - OpenAI GPT-4o raw outputs: 210/210 valid.
 - Anthropic Claude Sonnet 4.6 raw outputs: 210/210 valid.
 - Google Gemini 2.5 Pro raw outputs: 210/210 valid.
+- Dev participant-only actual-gender GPT-4o raw outputs: 70/70 valid.
+- Dev participant-only actual-gender Claude Sonnet 4.6 raw outputs: 70/70 valid.
+- Dev participant-only actual-gender Gemini 2.5 Pro raw outputs: 70/70 valid.
 
-- 每张表有 35 rows。
-- 每张表只包含一个 `condition`。
-- 每个 interview 同时有 Prompt A 和 Prompt B 输出。
-- 8 个 predicted item scores 都在 0 到 3 之间。
-- `pred_evidence_total` 等于 8 个 predicted item scores 的和。
-- `thresholded_item_binary` 与 `pred_evidence_total >= 10` 一致。
-- `global_binary_judgment` 是 0 或 1。
-- ground truth 标签列均存在且非空。
+The generated analysis tables were checked for the following:
+
+- Each table has 35 rows.
+- Each table contains exactly one `condition`.
+- Each interview has both Prompt A and Prompt B outputs.
+- The 8 predicted item scores are integers from 0 to 3.
+- `pred_evidence_total` equals the sum of the 8 predicted item scores.
+- `thresholded_item_binary` is consistent with `pred_evidence_total >= 10`.
+- `global_binary_judgment` is either 0 or 1.
+- Ground truth label columns are present and non-empty.
+- For the actual-gender run, `metadata_text` matches the Dev split `Gender` column using `0 = female` and `1 = male`.
 
 ## Suggested Comparisons
 
-可以先分别在三张表内比较：
+Within each table, start by comparing:
 
 - `pred_evidence_total` vs. `PHQ8_Score`
 - `thresholded_item_binary` vs. `PHQ8_Binary`
 - `global_binary_judgment` vs. `PHQ8_Binary`
-- 每个 `pred_*` item score vs. 对应的 `PHQ8_*` item label
+- Each `pred_*` item score vs. the corresponding `PHQ8_*` item label
 
-之后再跨三张表比较同一个 `interview_id` 在不同 input condition 下的输出差异。
+After that, compare the same `interview_id` across input conditions or across model families.

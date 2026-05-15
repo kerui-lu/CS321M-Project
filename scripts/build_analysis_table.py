@@ -72,9 +72,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--model-family", default="gpt")
     parser.add_argument(
+        "--condition",
+        action="append",
+        choices=CONDITIONS,
+        default=None,
+        help="Condition to write. May be repeated. Defaults to all three conditions.",
+    )
+    parser.add_argument(
         "--output-model-dir",
         default="gpt-4o",
         help="Model output directory to read, e.g. gpt-4o.",
+    )
+    parser.add_argument(
+        "--no-output-path-rewrite",
+        action="store_true",
+        help="Use manifest output_path values as-is instead of rewriting their model directory.",
     )
     parser.add_argument(
         "--provider-label",
@@ -92,6 +104,20 @@ def parse_args() -> argparse.Namespace:
         help="Deprecated alias for --model-label, kept for old GPT commands.",
     )
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument(
+        "--single-output-file",
+        default=None,
+        help=(
+            "Write a single CSV filename for a single selected condition, "
+            "relative to --output-dir unless absolute."
+        ),
+    )
+    parser.add_argument(
+        "--expected-rows",
+        type=int,
+        default=35,
+        help="Expected row count per written condition CSV.",
+    )
     parser.add_argument(
         "--prefix",
         default=None,
@@ -131,7 +157,9 @@ def display_path(path: Path) -> str:
         return str(path)
 
 
-def rewrite_output_path(path_text: str, output_model_dir: str) -> str:
+def rewrite_output_path(path_text: str, output_model_dir: str | None) -> str:
+    if output_model_dir is None:
+        return path_text
     path = Path(path_text)
     parts = list(path.parts)
     try:
@@ -209,7 +237,7 @@ def build_global_fields(output_json: dict[str, Any]) -> dict[str, str]:
 def build_condition_rows(
     manifest_rows: list[dict[str, str]],
     condition: str,
-    output_model_dir: str,
+    output_model_dir: str | None,
     provider_label: str,
     model_label: str,
 ) -> list[dict[str, str]]:
@@ -269,9 +297,9 @@ def write_csv(path: Path, rows: list[dict[str, str]]) -> None:
         writer.writerows(rows)
 
 
-def validate_condition_rows(rows: list[dict[str, str]], condition: str) -> None:
-    if len(rows) != 35:
-        raise ValueError(f"{condition} expected 35 rows, found {len(rows)}")
+def validate_condition_rows(rows: list[dict[str, str]], condition: str, expected_rows: int) -> None:
+    if len(rows) != expected_rows:
+        raise ValueError(f"{condition} expected {expected_rows} rows, found {len(rows)}")
     seen = set()
     for row in rows:
         if row["interview_id"] in seen:
@@ -300,17 +328,26 @@ def main() -> None:
     provider_label = args.provider_label or default_provider_label(args.model_family)
     model_label = args.model_label or args.openai_model or args.output_model_dir
     output_prefix = args.prefix or default_prefix(args.output_model_dir)
+    output_model_dir = None if args.no_output_path_rewrite else args.output_model_dir
+    conditions = args.condition or list(CONDITIONS)
 
-    for condition in CONDITIONS:
+    if args.single_output_file is not None and len(conditions) != 1:
+        raise ValueError("--single-output-file requires exactly one --condition")
+
+    for condition in conditions:
         rows = build_condition_rows(
             manifest_rows,
             condition=condition,
-            output_model_dir=args.output_model_dir,
+            output_model_dir=output_model_dir,
             provider_label=provider_label,
             model_label=model_label,
         )
-        validate_condition_rows(rows, condition)
-        output_path = output_dir / f"{output_prefix}_{condition}_outputs.csv"
+        validate_condition_rows(rows, condition, args.expected_rows)
+        if args.single_output_file is None:
+            output_path = output_dir / f"{output_prefix}_{condition}_outputs.csv"
+        else:
+            single_output_path = Path(args.single_output_file)
+            output_path = single_output_path if single_output_path.is_absolute() else output_dir / single_output_path
         write_csv(output_path, rows)
         print(f"Wrote {display_path(output_path)} with {len(rows)} rows")
 

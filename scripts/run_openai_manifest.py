@@ -168,6 +168,18 @@ def parse_args() -> argparse.Namespace:
         default=600,
         help="Maximum output tokens per response.",
     )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=1.0,
+        help="Sampling temperature. Defaults to 1.0 to match the formal model runs.",
+    )
+    parser.add_argument(
+        "--top-p",
+        type=float,
+        default=1.0,
+        help="Nucleus sampling top_p. Defaults to 1.0 to match the formal model runs.",
+    )
     return parser.parse_args()
 
 
@@ -223,7 +235,13 @@ def response_schema(prompt_type: str) -> tuple[str, dict[str, Any]]:
     raise ValueError(f"Unsupported prompt_type: {prompt_type}")
 
 
-def build_payload(row: dict[str, str], openai_model: str, max_output_tokens: int) -> dict[str, Any]:
+def build_payload(
+    row: dict[str, str],
+    openai_model: str,
+    max_output_tokens: int,
+    temperature: float,
+    top_p: float,
+) -> dict[str, Any]:
     system_text, user_text = render_prompt(row)
     schema_name, schema = response_schema(row["prompt_type"])
     return {
@@ -244,6 +262,8 @@ def build_payload(row: dict[str, str], openai_model: str, max_output_tokens: int
             }
         },
         "max_output_tokens": max_output_tokens,
+        "temperature": temperature,
+        "top_p": top_p,
         "store": False,
         "metadata": {
             "interview_id": row["interview_id"],
@@ -372,6 +392,9 @@ def main() -> None:
     print(f"Manifest rows for {args.model_family}: {len(rows)}")
     print(f"Pending rows selected: {len(pending)}")
     print(f"OpenAI model: {args.openai_model}")
+    print(f"Temperature: {args.temperature}")
+    print(f"Top-p: {args.top_p}")
+    print(f"Max output tokens: {args.max_output_tokens}")
 
     if args.dry_run:
         for row in pending[:10]:
@@ -400,7 +423,13 @@ def main() -> None:
             f"{row['condition']} {row['prompt_type']}"
         )
         try:
-            payload = build_payload(row, args.openai_model, args.max_output_tokens)
+            payload = build_payload(
+                row,
+                args.openai_model,
+                args.max_output_tokens,
+                args.temperature,
+                args.top_p,
+            )
             response = call_openai_with_retries(
                 payload,
                 api_key,
@@ -413,7 +442,12 @@ def main() -> None:
                 "status": "ok",
                 "started_at": started_at,
                 "finished_at": datetime.now(timezone.utc).isoformat(),
+                "provider": "OpenAI",
+                "model_name": args.openai_model,
                 "openai_model": args.openai_model,
+                "temperature": args.temperature,
+                "top_p": args.top_p,
+                "max_output_tokens": args.max_output_tokens,
                 "effective_output_path": effective_output_path_text,
                 "manifest_row": row,
                 "output_json": output_json,
@@ -424,7 +458,12 @@ def main() -> None:
                 log_path,
                 {
                     "status": "ok",
+                    "provider": "OpenAI",
+                    "model_name": args.openai_model,
                     "openai_model": args.openai_model,
+                    "temperature": args.temperature,
+                    "top_p": args.top_p,
+                    "max_output_tokens": args.max_output_tokens,
                     "output_path": effective_output_path_text,
                     "manifest_output_path": row["output_path"],
                     "row": row,
@@ -435,7 +474,12 @@ def main() -> None:
                 "status": "error",
                 "started_at": started_at,
                 "finished_at": datetime.now(timezone.utc).isoformat(),
+                "provider": "OpenAI",
+                "model_name": args.openai_model,
                 "openai_model": args.openai_model,
+                "temperature": args.temperature,
+                "top_p": args.top_p,
+                "max_output_tokens": args.max_output_tokens,
                 "effective_output_path": effective_output_path_text,
                 "manifest_row": row,
                 "error": str(exc),
@@ -448,7 +492,12 @@ def main() -> None:
                 log_path,
                 {
                     "status": "error",
+                    "provider": "OpenAI",
+                    "model_name": args.openai_model,
                     "openai_model": args.openai_model,
+                    "temperature": args.temperature,
+                    "top_p": args.top_p,
+                    "max_output_tokens": args.max_output_tokens,
                     "output_path": effective_output_path_text,
                     "manifest_output_path": row["output_path"],
                     "row": row,
