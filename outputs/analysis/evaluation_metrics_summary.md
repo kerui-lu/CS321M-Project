@@ -63,6 +63,36 @@ This report summarizes binary evaluation results for the Dev split LLM outputs i
 | actual_gender_participant_only | Combined | Item-threshold | 105 | 36 | 8 | 7 | 68 | 1 | 29 | 0.714 | 0.590 | 0.875 | 0.194 | 0.986 | 0.318 | 0.322 | 0.221 |
 | actual_gender_participant_only | Combined | Global | 105 | 36 | 64 | 34 | 39 | 30 | 2 | 0.695 | 0.755 | 0.531 | 0.944 | 0.565 | 0.680 | 0.496 | 0.430 |
 
+## Cross-API Comparison
+
+The table below aggregates each API across participant-containing runs: `no_gender_full_transcript`, `no_gender_participant_only`, and `actual_gender_participant_only`. This gives a compact API-level comparison for transcripts that include participant speech. It does not include `interviewer_only`, because that condition is primarily a sensitivity and leakage check rather than a viable prediction input.
+
+| API | Method | N | Label+ | Pred+ | Acc | Bal Acc | Precision | Recall | Specificity | F1 | MCC |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| GPT-4o | Item-threshold | 105 | 36 | 11 | 0.762 | 0.653 | 1.000 | 0.306 | 1.000 | 0.468 | 0.474 |
+| GPT-4o | Global | 105 | 36 | 65 | 0.724 | 0.790 | 0.554 | 1.000 | 0.580 | 0.713 | 0.567 |
+| Claude Sonnet 4.6 | Item-threshold | 105 | 36 | 5 | 0.705 | 0.569 | 1.000 | 0.139 | 1.000 | 0.244 | 0.310 |
+| Claude Sonnet 4.6 | Global | 105 | 36 | 58 | 0.733 | 0.777 | 0.569 | 0.917 | 0.638 | 0.702 | 0.529 |
+| Gemini 2.5 Pro | Item-threshold | 105 | 36 | 18 | 0.733 | 0.644 | 0.722 | 0.361 | 0.928 | 0.481 | 0.364 |
+| Gemini 2.5 Pro | Global | 105 | 36 | 62 | 0.695 | 0.748 | 0.532 | 0.917 | 0.580 | 0.673 | 0.479 |
+
+Across participant-containing runs, the `Global` method is stronger than `Item-threshold` for all three APIs on balanced accuracy, recall, F1, and MCC. GPT-4o has the highest global balanced accuracy, recall, F1, and MCC in this aggregate. Claude Sonnet 4.6 has slightly higher global raw accuracy and specificity than GPT-4o, reflecting a somewhat less positive-leaning decision pattern. Gemini 2.5 Pro is close to the other two APIs on global recall, but lower on specificity, F1, and MCC in this aggregate.
+
+The next table compares agreement across the three APIs. Agreement is computed on the same 35 interviews within each condition. `Avg Pairwise Agreement` is the mean of GPT-4o vs Claude, GPT-4o vs Gemini, and Claude vs Gemini exact binary agreement. `Avg Pairwise Kappa` is the corresponding mean Cohen's kappa. `Range of Pred+ Across APIs` shows the minimum and maximum number of positive predictions made by the three APIs in that condition.
+
+| Condition | Method | Avg Pairwise Agreement | Avg Pairwise Kappa | Range of Pred+ Across APIs |
+|---|---|---:|---:|---:|
+| no_gender_full_transcript | Item-threshold | 0.905 | 0.543 | 2-6 |
+| no_gender_full_transcript | Global | 0.924 | 0.845 | 18-21 |
+| no_gender_participant_only | Item-threshold | 0.848 | 0.397 | 2-8 |
+| no_gender_participant_only | Global | 0.962 | 0.921 | 20-22 |
+| actual_gender_participant_only | Item-threshold | 0.943 | 0.563 | 1-4 |
+| actual_gender_participant_only | Global | 0.943 | 0.880 | 20-22 |
+| no_gender_interviewer_only | Item-threshold | 1.000 | NA | 0-0 |
+| no_gender_interviewer_only | Global | 0.676 | 0.047 | 1-17 |
+
+For participant-containing transcripts, `Global` is more consistent across APIs than `Item-threshold`, with much higher average pairwise kappa. The `interviewer_only` condition is the exception: `Global` agreement collapses because the APIs respond very differently when participant speech is absent. The apparent perfect agreement for `interviewer_only` item-threshold is not meaningful, because all three APIs simply predict zero positives.
+
 ## Actual Gender Metadata vs No-Gender Participant-Only
 
 This comparison uses participant-only transcripts and contrasts the no-gender prompt condition with the actual-gender prompt condition. `Changed Outputs` counts binary output flips between the two conditions for the same interview and model. For `Combined`, it sums changes across the three models, so the denominator is 105.
