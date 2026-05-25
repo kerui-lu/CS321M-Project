@@ -103,6 +103,42 @@ The next table compares agreement across the three APIs. Agreement is computed o
 
 For participant-containing transcripts, `Global` is more consistent across APIs than `Item-threshold`, with much higher average pairwise kappa. The `interviewer_only` condition is the exception: `Global` agreement collapses because the APIs respond very differently when participant speech is absent. The apparent perfect agreement for `interviewer_only` item-threshold is not meaningful, because all three APIs simply predict zero positives.
 
+## Reliability Analysis: Krippendorff's Alpha
+
+This reliability analysis treats the three APIs as three annotators rating the same Dev interviews within each condition. The raters are GPT-4o, Claude Sonnet 4.6, and Gemini 2.5 Pro. The units are the 35 Dev interviews. Ground truth `PHQ8_Binary` is not used as a rater here; Krippendorff's alpha measures cross-API agreement, not criterion accuracy.
+
+For binary outputs, nominal Krippendorff's alpha is used. For `pred_evidence_total`, interval-style alpha is used. For the eight PHQ-8-inspired item scores, interval-style alpha is computed separately for each 0-3 item score and then summarized with the mean across items.
+
+| Condition | Item-threshold Binary Alpha | Global Binary Alpha |
+|---|---:|---:|
+| no_gender_full_transcript | 0.534 | 0.847 |
+| no_gender_participant_only | 0.347 | 0.922 |
+| actual_gender_full_transcript | 0.592 | 0.846 |
+| actual_gender_participant_only | 0.598 | 0.881 |
+| no_gender_interviewer_only | NA | -0.040 |
+
+`Global` has high cross-API reliability for every participant-containing condition, ranging from 0.846 to 0.922. The corresponding `Item-threshold` binary alpha is lower in every participant-containing condition, indicating that thresholding the item total at 10 produces less stable binary agreement across APIs. The `interviewer_only` condition again behaves differently: global alpha is poor, and item-threshold alpha is undefined because all three APIs predict no positives.
+
+| Condition | Evidence Total Alpha |
+|---|---:|
+| no_gender_full_transcript | 0.860 |
+| no_gender_participant_only | 0.787 |
+| actual_gender_full_transcript | 0.859 |
+| actual_gender_participant_only | 0.796 |
+| no_gender_interviewer_only | -0.122 |
+
+The continuous `pred_evidence_total` scores show high cross-API reliability for participant-containing transcripts. This suggests that the APIs often agree on the broad severity ranking or magnitude, even though the binary item-threshold decision is sensitive to small differences around the cutoff.
+
+| Condition | Mean Item-Score Alpha | no_interest | depressed_mood | sleep | tired | appetite | failure | concentration | psychomotor |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| no_gender_full_transcript | 0.732 | 0.683 | 0.867 | 0.886 | 0.657 | 0.899 | 0.657 | 0.618 | 0.584 |
+| no_gender_participant_only | 0.693 | 0.546 | 0.836 | 0.861 | 0.654 | 0.926 | 0.637 | 0.537 | 0.544 |
+| actual_gender_full_transcript | 0.721 | 0.721 | 0.890 | 0.890 | 0.691 | 0.853 | 0.671 | 0.509 | 0.545 |
+| actual_gender_participant_only | 0.738 | 0.550 | 0.853 | 0.902 | 0.689 | 0.914 | 0.661 | 0.547 | 0.789 |
+| no_gender_interviewer_only | -0.042 | 0.000 | -0.128 | -0.121 | NA | NA | 0.080 | NA | NA |
+
+The item-score reliability results are reasonable for participant-containing transcripts, with mean item alpha values from 0.693 to 0.738. Reliability is highest for symptoms that tend to have clearer lexical evidence, such as appetite, sleep, and depressed mood. The interviewer-only condition is not reliable for item scoring and should remain a sensitivity or leakage check rather than a primary prediction condition.
+
 ## Actual Gender Metadata vs No-Gender Conditions
 
 This comparison contrasts the no-gender prompt condition with the actual-gender prompt condition for the same transcript condition. `Changed Outputs` counts binary output flips between the two metadata conditions for the same interview and model. For `Combined`, it sums changes across the three models, so the denominator is 105 for each transcript condition.
@@ -129,8 +165,10 @@ This comparison contrasts the no-gender prompt condition with the actual-gender 
 ## Conclusions
 
 - For participant-containing transcripts, `global_binary_judgment` has higher balanced accuracy, recall, F1, and MCC than `thresholded_item_binary`.
+- For participant-containing transcripts, `global_binary_judgment` also has stronger cross-API reliability than `thresholded_item_binary`, with nominal Krippendorff's alpha between 0.846 and 0.922.
 - `thresholded_item_binary` is more conservative: it has high specificity but low recall, meaning it rarely predicts positives but misses many `PHQ8_Binary = 1` cases.
 - `global_binary_judgment` is more sensitive: it has high recall but lower specificity, meaning it catches most `PHQ8_Binary = 1` cases but produces more false positives.
+- Evidence totals and PHQ-8-inspired item scores show reasonable cross-API reliability for participant-containing transcripts, but the final thresholded binary item decision is less stable.
 - Adding actual gender metadata changes global outputs very little: 5/210 combined output changes across full-transcript and participant-only conditions, compared with 14/210 for item-threshold outputs.
 - `interviewer_only` should not be treated as a reliable depression-prediction input. It is better interpreted as a condition-sensitivity or leakage check.
 - Recommended framing: use `global_binary_judgment` as the primary binary outcome for participant-containing transcripts, while retaining item-threshold results as a structured robustness check.
