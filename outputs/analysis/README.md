@@ -65,11 +65,11 @@ validation: outputs/validation/dev_main_gemini_validation.csv
 
 The earlier `gpt-4o-mini` outputs are stored under `outputs/llm_raw/dev_main/gpt/`. They are not part of the formal three-model CSV tables documented here.
 
-## Gender Metadata Participant-Only Run
+## Gender Metadata Runs
 
-This directory also includes a Dev participant-only actual-gender metadata experiment. This is not a counterfactual gender sensitivity run: each participant receives only the gender recorded in the dataset.
+This directory also includes Dev actual-gender metadata experiments. These are not counterfactual gender sensitivity runs: each participant receives only the gender recorded in the dataset.
 
-- Input condition: `participant_only`
+- Input conditions: `participant_only` and `full_transcript`
 - Metadata condition: `actual_gender`
 - Gender mapping: `0 = female`, `1 = male`
 - Metadata text:
@@ -84,13 +84,21 @@ Formal model settings:
 - Google `gemini-2.5-pro`: `temperature=1.0`, `top_p=1.0`, `thinking_budget=128`, `max_output_tokens=600`
 
 ```text
-manifest: outputs/manifests/dev_gender_participant_only_manifest.csv
-gpt raw outputs: outputs/llm_raw/dev_gender_participant_only/gpt-4o/
-claude raw outputs: outputs/llm_raw/dev_gender_participant_only/claude-sonnet-4-6/
-gemini raw outputs: outputs/llm_raw/dev_gender_participant_only/gemini-2.5-pro/
-gpt validation: outputs/validation/dev_gender_participant_only_gpt_validation.csv
-claude validation: outputs/validation/dev_gender_participant_only_claude_validation.csv
-gemini validation: outputs/validation/dev_gender_participant_only_gemini_validation.csv
+participant-only manifest: outputs/manifests/dev_gender_participant_only_manifest.csv
+participant-only gpt raw outputs: outputs/llm_raw/dev_gender_participant_only/gpt-4o/
+participant-only claude raw outputs: outputs/llm_raw/dev_gender_participant_only/claude-sonnet-4-6/
+participant-only gemini raw outputs: outputs/llm_raw/dev_gender_participant_only/gemini-2.5-pro/
+participant-only gpt validation: outputs/validation/dev_gender_participant_only_gpt_validation.csv
+participant-only claude validation: outputs/validation/dev_gender_participant_only_claude_validation.csv
+participant-only gemini validation: outputs/validation/dev_gender_participant_only_gemini_validation.csv
+
+full-transcript manifest: outputs/manifests/dev_gender_full_transcript_manifest.csv
+full-transcript gpt raw outputs: outputs/llm_raw/dev_gender_full_transcript/gpt-4o/
+full-transcript claude raw outputs: outputs/llm_raw/dev_gender_full_transcript/claude-sonnet-4-6/
+full-transcript gemini raw outputs: outputs/llm_raw/dev_gender_full_transcript/gemini-2.5-pro/
+full-transcript gpt validation: outputs/validation/dev_gender_full_transcript_gpt_validation.csv
+full-transcript claude validation: outputs/validation/dev_gender_full_transcript_claude_validation.csv
+full-transcript gemini validation: outputs/validation/dev_gender_full_transcript_gemini_validation.csv
 ```
 
 ## Files
@@ -119,9 +127,13 @@ gemini validation: outputs/validation/dev_gender_participant_only_gemini_validat
 - `dev_gender_participant_only_claudesonnet46_outputs.csv`
 - `dev_gender_participant_only_gemini25pro_outputs.csv`
 
+- `dev_gender_full_transcript_gpt4o_outputs.csv`
+- `dev_gender_full_transcript_claudesonnet46_outputs.csv`
+- `dev_gender_full_transcript_gemini25pro_outputs.csv`
+
 For the no-gender main run, each model has three separate CSV files rather than one combined three-condition table. Each CSV contains exactly one `condition`, which makes separate comparison against the ground truth CSV easier.
 
-For the gender-metadata run, the three CSV files are also separate by model. Each file contains only the `participant_only` condition.
+For the gender-metadata runs, the CSV files are also separate by model and condition. Each file contains either `participant_only` or `full_transcript`.
 
 ## Key Columns
 
@@ -199,6 +211,9 @@ Validation summaries:
 - Dev participant-only actual-gender GPT-4o raw outputs: 70/70 valid.
 - Dev participant-only actual-gender Claude Sonnet 4.6 raw outputs: 70/70 valid.
 - Dev participant-only actual-gender Gemini 2.5 Pro raw outputs: 70/70 valid.
+- Dev full-transcript actual-gender GPT-4o raw outputs: 70/70 valid.
+- Dev full-transcript actual-gender Claude Sonnet 4.6 raw outputs: 70/70 valid.
+- Dev full-transcript actual-gender Gemini 2.5 Pro raw outputs: 70/70 valid.
 
 The generated analysis tables were checked for the following:
 

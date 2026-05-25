@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Build Dev participant-only gender-metadata LLM-call manifest."""
+"""Build Dev actual-gender metadata LLM-call manifests."""
 
 from __future__ import annotations
 
+import argparse
 import csv
+import zipfile
 from pathlib import Path
 
 
@@ -14,20 +16,42 @@ DEV_LABELS = DATA_DIR / "dev_split_Depression_AVEC2017.csv"
 PROMPT_DIR = PROJECT_DIR / "prompts"
 OUTPUT_DIR = PROJECT_DIR / "outputs"
 MANIFEST_DIR = OUTPUT_DIR / "manifests"
+FULL_TRANSCRIPT_DIR = OUTPUT_DIR / "transcripts" / "dev_full"
 
 LABEL_ID_COLUMN = "Participant_ID"
-CONDITION = "participant_only"
 METADATA_CONDITION = "actual_gender"
 REPEAT_ID = "1"
 PROMPTS = {
     "item_evidence": PROMPT_DIR / "prompt_a_item_evidence.txt",
     "global_binary": PROMPT_DIR / "prompt_b_global_binary.txt",
 }
+CONDITIONS = ("participant_only", "full_transcript")
 MODEL_OUTPUT_DIRS = {
     "gpt": "gpt-4o",
     "claude": "claude-sonnet-4-6",
     "gemini": "gemini-2.5-pro",
 }
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Build a Dev actual-gender metadata manifest for one transcript condition."
+    )
+    parser.add_argument(
+        "--condition",
+        choices=CONDITIONS,
+        default="participant_only",
+        help="Transcript condition to run with actual gender metadata.",
+    )
+    parser.add_argument(
+        "--experiment-name",
+        default=None,
+        help=(
+            "Experiment directory/name for manifest and raw outputs. Defaults to "
+            "dev_gender_participant_only or dev_gender_full_transcript."
+        ),
+    )
+    return parser.parse_args()
 
 
 def project_rel(path: Path) -> str:
@@ -57,12 +81,64 @@ def participant_transcript_path(interview_id: str) -> Path:
     return DEV_DIR / f"{interview_id}_P" / f"{interview_id}_TRANSCRIPT_PARTICIPANT.csv"
 
 
-def build_rows(labels: list[dict[str, str]], label_columns: list[str]) -> list[dict[str, str]]:
+def read_zip_transcript(zip_path: Path) -> str:
+    with zipfile.ZipFile(zip_path) as zf:
+        names = [
+            name
+            for name in zf.namelist()
+            if name.endswith("_TRANSCRIPT.csv") and not name.endswith("/")
+        ]
+        if len(names) != 1:
+            raise ValueError(
+                f"{zip_path.name} should contain exactly one transcript; found {len(names)}"
+            )
+        return zf.read(names[0]).decode("utf-8-sig")
+
+
+def full_transcript_path(interview_id: str) -> Path:
+    out_path = FULL_TRANSCRIPT_DIR / f"{interview_id}_TRANSCRIPT_FULL.csv"
+    if out_path.exists():
+        return out_path
+
+    zip_path = DEV_DIR / f"{interview_id}_P.zip"
+    if not zip_path.exists():
+        raise FileNotFoundError(zip_path)
+
+    FULL_TRANSCRIPT_DIR.mkdir(parents=True, exist_ok=True)
+    text = read_zip_transcript(zip_path)
+    if not text.endswith("\n"):
+        text += "\n"
+    out_path.write_text(text, encoding="utf-8")
+    return out_path
+
+
+def transcript_path_for_condition(interview_id: str, condition: str) -> Path:
+    if condition == "participant_only":
+        return participant_transcript_path(interview_id)
+    if condition == "full_transcript":
+        return full_transcript_path(interview_id)
+    raise ValueError(f"Unsupported condition: {condition}")
+
+
+def default_experiment_name(condition: str) -> str:
+    if condition == "participant_only":
+        return "dev_gender_participant_only"
+    if condition == "full_transcript":
+        return "dev_gender_full_transcript"
+    raise ValueError(f"Unsupported condition: {condition}")
+
+
+def build_rows(
+    labels: list[dict[str, str]],
+    label_columns: list[str],
+    condition: str,
+    experiment_name: str,
+) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
 
     for label_row in labels:
         interview_id = label_row[LABEL_ID_COLUMN]
-        transcript_path = participant_transcript_path(interview_id)
+        transcript_path = transcript_path_for_condition(interview_id, condition)
         if not transcript_path.exists():
             raise FileNotFoundError(transcript_path)
 
@@ -75,15 +151,15 @@ def build_rows(labels: list[dict[str, str]], label_columns: list[str]) -> list[d
                 output_path = (
                     OUTPUT_DIR
                     / "llm_raw"
-                    / "dev_gender_participant_only"
+                    / experiment_name
                     / output_model_dir
-                    / CONDITION
+                    / condition
                     / prompt_type
                     / f"{interview_id}.json"
                 )
                 row = {
                     "interview_id": interview_id,
-                    "condition": CONDITION,
+                    "condition": condition,
                     "prompt_type": prompt_type,
                     "metadata_condition": METADATA_CONDITION,
                     "metadata_text": row_metadata_text,
@@ -108,14 +184,14 @@ def write_manifest(path: Path, rows: list[dict[str, str]]) -> None:
         writer.writerows(rows)
 
 
-def validate_rows(rows: list[dict[str, str]]) -> None:
+def validate_rows(rows: list[dict[str, str]], condition: str) -> None:
     expected_rows = 35 * 2 * 3
     if len(rows) != expected_rows:
         raise ValueError(f"Expected {expected_rows} rows, found {len(rows)}")
 
     counts = {model_family: 0 for model_family in MODEL_OUTPUT_DIRS}
     for row in rows:
-        if row["condition"] != CONDITION:
+        if row["condition"] != condition:
             raise ValueError(f"Unexpected condition: {row}")
         if row["metadata_condition"] != METADATA_CONDITION:
             raise ValueError(f"Unexpected metadata_condition: {row}")
@@ -130,11 +206,19 @@ def validate_rows(rows: list[dict[str, str]]) -> None:
 
 
 def main() -> None:
-    labels, label_columns = read_labels()
-    rows = build_rows(labels, label_columns)
-    validate_rows(rows)
+    args = parse_args()
+    experiment_name = args.experiment_name or default_experiment_name(args.condition)
 
-    manifest_path = MANIFEST_DIR / "dev_gender_participant_only_manifest.csv"
+    labels, label_columns = read_labels()
+    rows = build_rows(
+        labels,
+        label_columns,
+        condition=args.condition,
+        experiment_name=experiment_name,
+    )
+    validate_rows(rows, condition=args.condition)
+
+    manifest_path = MANIFEST_DIR / f"{experiment_name}_manifest.csv"
     write_manifest(manifest_path, rows)
     print(f"Wrote {project_rel(manifest_path)} with {len(rows)} rows")
 
